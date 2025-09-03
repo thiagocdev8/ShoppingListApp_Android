@@ -1,6 +1,8 @@
 package com.example.shoppinglistapp_android;
 
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.content.DialogInterface;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
@@ -53,12 +55,18 @@ public class MainActivity extends Activity {
             throw new RuntimeException(e);
         }
 
-
+        carregarItems();
+        minhaLista.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                Toast.makeText(MainActivity.this, "Segure o item para deletar.", Toast.LENGTH_SHORT).show();
+            }
+        });
 
         minhaLista.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
             @Override
             public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
-                apagarItem(ids.get(position));
+                alertaApagarTarefa(position);
                 return false;
             }
         });
@@ -128,7 +136,6 @@ public class MainActivity extends Activity {
 
     private void apagarItem(Integer id){
         try{
-
             bancoDeDados.execSQL("DELETE FROM meusItens WHERE id=" + id);
             carregarItems();
             Toast.makeText(this, "Item removido.", Toast.LENGTH_SHORT).show();
@@ -136,5 +143,20 @@ public class MainActivity extends Activity {
             e.printStackTrace();
             Toast.makeText(this, "Item não encontrado.", Toast.LENGTH_SHORT).show();
         }
+    }
+
+    private void alertaApagarTarefa(Integer idSelecionado){
+        String tarefaSelecionada = itens.get(idSelecionado);
+        final Integer numeroId = idSelecionado;
+
+        new AlertDialog.Builder(MainActivity.this)
+                .setTitle("Aviso!")
+                .setMessage("Deseja apagar a tarefa: " + tarefaSelecionada + " ?")
+                .setPositiveButton("Sim", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialog, int which) {
+                        apagarItem(ids.get(numeroId));
+                    }
+                }).setNegativeButton("Não", null).show();
     }
 }
