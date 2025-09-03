@@ -6,6 +6,8 @@ import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
@@ -18,14 +20,20 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.ArrayList;
+
 public class MainActivity extends Activity {
 
 
     private EditText meuTexto;
     private ListView minhaLista;
     private Button meuBotao;
-
     private SQLiteDatabase bancoDeDados;
+
+    private ArrayAdapter<String> itensAdaptador;
+    private ArrayList<Integer> ids;
+    private ArrayList<String> itens;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +44,7 @@ public class MainActivity extends Activity {
         minhaLista = findViewById(R.id.minhaLista);
         meuBotao = findViewById(R.id.button);
 
+
         try{
             bancoDeDados = openOrCreateDatabase("ShoppingList", MODE_PRIVATE, null);
             bancoDeDados.execSQL("Create Table IF NOT EXISTS meusItens(id INTEGER PRIMARY KEY AUTOINCREMENT, item VARCHAR)");
@@ -44,35 +53,54 @@ public class MainActivity extends Activity {
             throw new RuntimeException(e);
         }
 
+
+
+        minhaLista.setOnItemLongClickListener(new AdapterView.OnItemLongClickListener() {
+            @Override
+            public boolean onItemLongClick(AdapterView<?> parent, View view, int position, long id) {
+                apagarItem(ids.get(position));
+                return false;
+            }
+        });
         meuBotao.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 adicionarItem(meuTexto.getText().toString());
-
-
             }
         });
+
+
     }
 
     private void carregarItems(){
         try{
-            Cursor cursor = bancoDeDados.rawQuery("SELECT * FROM meusItens", null);
+            Cursor cursor = bancoDeDados.rawQuery("SELECT * FROM meusItens ORDER BY id DESC", null);
 
             int indiceColunaId = cursor.getColumnIndex("id");
             int indiceColunaItem = cursor.getColumnIndex("item"); // Corrigido para 'item'
+
+            itens = new ArrayList<String>();
+            ids = new ArrayList<Integer>();
 
             if (cursor != null && cursor.moveToFirst()) {
                 do {
                     String itemId = cursor.getString(indiceColunaId);
                     String itemNome = cursor.getString(indiceColunaItem);
                     Log.i("Logx", "ID: " + itemId + " | Item: " + itemNome);
+                    itens.add(itemNome);
+                    ids.add(Integer.parseInt(itemId));
                 } while (cursor.moveToNext());
             }
 
             if (cursor != null) {
                 cursor.close();
             }
+
+            itensAdaptador = new ArrayAdapter<String>(getApplicationContext(),
+                    android.R.layout.simple_list_item_1,
+                    android.R.id.text1, itens);
+
+            minhaLista.setAdapter(itensAdaptador);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -85,11 +113,11 @@ public class MainActivity extends Activity {
               Toast.makeText(this, "Digite o nome do item!", Toast.LENGTH_SHORT).show();
           }else {
               Toast.makeText(this, "Item: " + novoItem +  " inserido!", Toast.LENGTH_SHORT).show();
-              meuTexto.setText("");
+
               String newItem = meuTexto.getText().toString();
               bancoDeDados.execSQL("INSERT INTO meusItens(item) VALUES('" + newItem + "')");
               carregarItems();
-
+              meuTexto.setText("");
           }
 
         } catch (Exception e) {
@@ -98,7 +126,15 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void apagarItem(){
+    private void apagarItem(Integer id){
+        try{
 
+            bancoDeDados.execSQL("DELETE FROM meusItens WHERE id=" + id);
+            carregarItems();
+            Toast.makeText(this, "Item removido.", Toast.LENGTH_SHORT).show();
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Item não encontrado.", Toast.LENGTH_SHORT).show();
+        }
     }
 }
